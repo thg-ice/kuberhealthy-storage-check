@@ -51,6 +51,7 @@ This check follows the list of actions in order during the run of the check:
   - `CHECK_STORAGE_IGNORED_CHECK_NODES`: The list of nodes to ignore for the check (default=empty)
   - `CHECK_STORAGE_INIT_COMMAND_ARGS`: The arguments to the storage check data initialization (default=`echo storage-check-ok > /data/index.html && ls -la /data && cat /data/index.html`)
   - `CHECK_STORAGE_COMMAND_ARGS`: The arguments to the storage check command (default=`ls -la /data && cat /data/index.html && cat /data/index.html | grep storage-check-ok`)
+  - `CHECK_STORAGE_ACCESS_MODE`: the storage access mode could be {ReadWriteOnce, ReadWriteMany}
   - `CHECK_POD_CPU_REQUEST`: Check pod deployment CPU request value. Calculated in decimal SI units `(15 = 15m cpu)`.
   - `CHECK_POD_CPU_LIMIT`: Check pod deployment CPU limit value. Calculated in decimal SI units `(75 = 75m cpu)`.
   - `CHECK_POD_MEM_REQUEST`: Check pod deployment memory request value. Calculated in binary SI units `(20 * 1024^2 = 20Mi memory)`.

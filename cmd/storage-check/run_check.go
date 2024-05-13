@@ -68,7 +68,7 @@ func runStorageCheck() {
 
 	//TODO make all of this a function for easy reuse for  storage, deployment, service
 	// Create a storage resource.
-	storageConfig := createStorageConfig(checkStorageName)
+	storageConfig := createStorageConfig(checkStorageName, os.Getenv("CHECK_STORAGE_ACCESS_MODE"))
 	log.Infoln("Created Storage resource.")
 	log.Infof("It looks like: %v", storageConfig)
 

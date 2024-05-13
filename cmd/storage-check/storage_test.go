@@ -9,7 +9,7 @@ import (
 func TestCreateStorageConfig(t *testing.T) {
 	cases := []string{"test-image:latest", "nginx:latest", "nginx:test"}
 	for _, c := range cases {
-		storageConfig := createStorageConfig(c)
+		storageConfig := createStorageConfig(c, "")
 
 		if len(storageConfig.Name) == 0 {
 			t.Fatalf("nil container name: %s\n", storageConfig.Name)
@@ -32,7 +32,7 @@ func TestCreateStorageConfigFromEnv(t *testing.T) {
 
 	cases := []string{"test-image:latest", "nginx:latest", "nginx:test"}
 	for _, c := range cases {
-		storageConfig := createStorageConfig(c)
+		storageConfig := createStorageConfig(c, "")
 		t.Logf("storageConfig=%s\n", storageConfig)
 
 		if len(storageConfig.Name) == 0 {

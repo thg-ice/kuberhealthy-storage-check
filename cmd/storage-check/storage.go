@@ -53,8 +53,15 @@ const (
 	defaultProbePeriodSeconds       = 15 // How often to perform the probe (k8s default = 10).
 )
 
+func getAccessMode(access string) v1.PersistentVolumeAccessMode {
+	if access == "ReadWriteMany" {
+		return v1.ReadWriteMany
+	}
+	return v1.ReadWriteOnce
+}
+
 // createStorageConfig creates and configures a k8s PVC and returns the struct (ready to apply with client).
-func createStorageConfig(pvcname string) *corev1.PersistentVolumeClaim {
+func createStorageConfig(pvcname, accessMode string) *corev1.PersistentVolumeClaim {
 
 	// Make a k8s pvc.
 	// https://kubernetes.io/docs/concepts/storage/persistent-volumes/
@@ -69,7 +76,7 @@ func createStorageConfig(pvcname string) *corev1.PersistentVolumeClaim {
 
 	// Make a pvc spec.
 	pvcSpec := corev1.PersistentVolumeClaimSpec{
-		AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+		AccessModes: []v1.PersistentVolumeAccessMode{getAccessMode(accessMode)},
 		//Selector: ""
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
