@@ -18,7 +18,7 @@ spec:
           value: "9m"
         - name: MAX_FAILURES_ALLOWED
           value: "9"
-      image: chrishirsch/kuberhealthy-storage-check:v0.0.1
+      image: ghcr.io/thg-ice/kuberhealthy-storage-check:v0.0.1
       imagePullPolicy: IfNotPresent
       name: main
       resources:

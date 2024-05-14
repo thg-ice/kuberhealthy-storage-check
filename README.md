@@ -83,7 +83,7 @@ spec:
           value: "vsan-default"
         - name : CHECK_STORAGE_IGNORED_CHECK_NODES
           value: "node4"
-      image: chrishirsch/kuberhealthy-storage-check:v0.0.2
+      image: ghcr.io/thg-ice/kuberhealthy-storage-check:v0.0.1
       imagePullPolicy: IfNotPresent
       name: main
       resources:
@@ -185,18 +185,18 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: storage-sa
-
 ```
 
 #### Install
 
 To use the *Storage Check* with Kuberhealthy, apply the configuration file [storage-check.yaml](storage-check.yaml) to your Kubernetes Cluster. The following command will also apply the configuration file to your current context:
 
-`kubectl apply -f https://raw.githubusercontent.com/ChrisHirsch/kuberhealthy-storage-check/master/deploy/storage-check.yaml`
+`kubectl apply -f https://raw.githubusercontent.com/thg-ice/kuberhealthy-storage-check/main/deploy/storage-check.yaml`
 
 Make sure you are using the latest release of Kuberhealthy 2.0.0 or later.
 
 The check configuration file contains:
+
 - KuberhealthyCheck
 - Role
 - Rolebinding
@@ -205,7 +205,3 @@ The check configuration file contains:
 - ServiceAccount
 
 The role, rolebinding, clusterrole, clusterrolebinding and service account are all required to create and delete all PVCs and jobs from the check in the given namespaces you install the check for. The assumed default service account does not provide enough permissions for this check to run.
-
-
-![Go](https://github.com/ChrisHirsch/kuberhealthy-storage-check/workflows/Go/badge.svg)
-![Run Gosec](https://github.com/ChrisHirsch/kuberhealthy-storage-check/workflows/Run%20Gosec/badge.svg)
