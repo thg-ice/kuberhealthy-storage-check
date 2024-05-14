@@ -1,4 +1,3 @@
-# TODO move docker build step to a github action and push it to our internal registry
 FROM golang:1.13 AS builder
 WORKDIR /build
 COPY go.* /build/
