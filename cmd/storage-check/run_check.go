@@ -13,6 +13,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -149,7 +150,6 @@ func runStorageCheck() {
 			checkNodes[node.name] = node
 		}
 	} else {
-
 		log.Infoln("Getting a list of worker nodes from the cluster")
 		//TODO Maybe allow different selectors to determine how to get "usable" nodes from the cluster?
 		nodes, err := client.CoreV1().Nodes().List(metav1.ListOptions{
@@ -210,57 +210,65 @@ func runStorageCheck() {
 		}
 	}
 
-	// TODO redo this logic proably have a more generic getScheduledNodes()?
-	var checkableNodes string
+	var checkableNodes []string
 	for nodeName, node := range checkNodes {
-		if node.schedulable == true {
-			checkableNodes += nodeName + ","
+		if node.schedulable {
+			checkableNodes = append(checkableNodes, nodeName)
 		}
 	}
-	log.Infof("Going to check these nodes %s", checkableNodes)
-
-	for nodeName, node := range checkNodes {
-		if node.schedulable == true {
-			log.Infof("Creating config for %s %+v", nodeName, node)
-			config := checkNodeConfig(checkStorageName+"-check-job", checkStorageName, nodeName)
-			log.Infoln("Created config.")
-			log.Infof("It looks like: %+v", config)
-
-			// Initialize the storage
-			var checkStorageResult CheckStorageResult
-			select {
-			case checkStorageResult = <-checkStorage(config):
-				// Handle errors when the storage check process completes.
-				if checkStorageResult.Err != nil {
-					log.Errorln("error occurred checking storage in cluster:", checkStorageResult.Err)
-					reportErrorsToKuberhealthy([]string{checkStorageResult.Err.Error() + " Node:" + nodeName})
-					return
-				}
-				// Continue with the check if there is no error.
-				log.Infoln("Initialized storage check in namespace:", checkStorageResult.Pod.Namespace, "pod:", checkStorageResult.Pod.Name)
-			case <-ctx.Done():
-				// If there is a cancellation interrupt signal.
-				log.Infoln("Cancelling storage check and shutting down due to interrupt.")
-				reportErrorsToKuberhealthy([]string{"failed to check already initialized storage within timeout Node:" + nodeName})
-				return
-			case <-runTimeout:
-				// If creating a storage took too long, exit.
-				reportErrorsToKuberhealthy([]string{"failed to check already initialized storage within timeout Node:" + nodeName})
-				return
-			}
-			// If we made it here then our Job returned ok and the storage check passed
-			log.Infoln("Check for", nodeName, "was healthy! Removing the job now...")
-
-			// Delete the storage check Job.
-			// TODO - add select to catch context timeout expiration
-			err := deleteStorageCheckAndWait(ctx)
-			if err != nil {
-				log.Errorln("error cleaning up storage check job:", err)
-			}
-
-			log.Infoln("Removed job check for", nodeName)
-		}
+	if len(checkableNodes) == 0 {
+		log.Errorf("no node is available to run tests on")
+		return
 	}
+	var idx = rand.Intn(len(checkableNodes))
+	nodeName := checkableNodes[idx]
+
+	// Choose one random node to run test on
+	node, ok := checkNodes[nodeName]
+	if !ok {
+		log.Errorf("no node is available to run tests on")
+		return
+	}
+
+	log.Infof("Going to run check on this node %v", nodeName)
+	log.Infof("Creating config for %s %+v", nodeName, node)
+	config := checkNodeConfig(checkStorageName+"-check-job", checkStorageName, nodeName)
+	log.Infoln("Created config.")
+	log.Infof("It looks like: %+v", config)
+
+	// Initialize the storage
+	var checkStorageResult CheckStorageResult
+	select {
+	case checkStorageResult = <-checkStorage(config):
+		// Handle errors when the storage check process completes.
+		if checkStorageResult.Err != nil {
+			log.Errorln("error occurred checking storage in cluster:", checkStorageResult.Err)
+			reportErrorsToKuberhealthy([]string{checkStorageResult.Err.Error() + " Node:" + nodeName})
+			return
+		}
+		// Continue with the check if there is no error.
+		log.Infoln("Initialized storage check in namespace:", checkStorageResult.Pod.Namespace, "pod:", checkStorageResult.Pod.Name)
+	case <-ctx.Done():
+		// If there is a cancellation interrupt signal.
+		log.Infoln("Cancelling storage check and shutting down due to interrupt.")
+		reportErrorsToKuberhealthy([]string{"failed to check already initialized storage within timeout Node:" + nodeName})
+		return
+	case <-runTimeout:
+		// If creating a storage took too long, exit.
+		reportErrorsToKuberhealthy([]string{"failed to check already initialized storage within timeout Node:" + nodeName})
+		return
+	}
+	// If we made it here then our Job returned ok and the storage check passed
+	log.Infoln("Check for", nodeName, "was healthy! Removing the job now...")
+
+	// Delete the storage check Job.
+	// TODO - add select to catch context timeout expiration
+	err := deleteStorageCheckAndWait(ctx)
+	if err != nil {
+		log.Errorln("error cleaning up storage check job:", err)
+	}
+
+	log.Infoln("Removed job check for", nodeName)
 
 	// Clean up!
 	cleanUpError := cleanUp(ctx)
