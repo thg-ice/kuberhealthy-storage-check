@@ -166,7 +166,7 @@ func initializeStorageConfig(jobName string, pvcName string) *batchv1.Job {
 }
 
 // checkNodeConfig creates and configures a k8s job to initialize storage at PVC and returns the struct (ready to apply with client).
-func checkNodeConfig(jobName string, pvcName string, node string) *batchv1.Job {
+func checkNodeConfig(jobName string, pvcName string) *batchv1.Job {
 
 	// Make a Job
 	job := &batchv1.Job{}
@@ -203,7 +203,6 @@ func checkNodeConfig(jobName string, pvcName string, node string) *batchv1.Job {
 						Args:    args,
 					},
 				},
-				NodeName:      node,
 				RestartPolicy: v1.RestartPolicyNever,
 				Volumes: []corev1.Volume{{
 					Name:         "data",
