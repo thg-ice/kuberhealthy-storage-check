@@ -29,9 +29,6 @@ var (
 	// K8s config file for the client.
 	kubeConfigFile = filepath.Join(os.Getenv("HOME"), ".kube", "config")
 
-	allowedCheckNodesEnv = os.Getenv("CHECK_STORAGE_ALLOWED_CHECK_NODES")
-	ignoredCheckNodesEnv = os.Getenv("CHECK_STORAGE_IGNORED_CHECK_NODES")
-
 	// By default, there is no storage class defined for the PVC (used the cluster default)
 	storageClassNameEnv = os.Getenv("CHECK_STORAGE_PVC_STORAGE_CLASS_NAME")
 
@@ -79,10 +76,6 @@ var (
 	checkNamespaceEnv = os.Getenv("CHECK_NAMESPACE")
 	checkNamespace    string
 
-	// ServiceAccount that will deploy the test deployment [default = default]
-	checkServiceAccountEnv = os.Getenv("CHECK_SERVICE_ACCOUNT")
-	checkServiceAccount    string
-
 	// Deployment pod resource requests and limits.
 	millicoreRequestEnv = os.Getenv("CHECK_POD_CPU_REQUEST")
 	millicoreRequest    int
@@ -98,10 +91,6 @@ var (
 
 	// Check time limit.
 	checkTimeLimit time.Duration
-
-	// Boolean value if a rolling-update is requested.
-	rollingUpdateEnv = os.Getenv("CHECK_DEPLOYMENT_ROLLING_UPDATE")
-	rollingUpdate    bool
 
 	// Additional container environment variables if a custom image is used for the deployment.
 	additionalEnvVarsEnv = os.Getenv("ADDITIONAL_ENV_VARS")
@@ -282,5 +271,4 @@ func reportToKuberhealthy(ok bool, errs []string) {
 	if err != nil {
 		log.Fatalln("error reporting to kuberhealthy:", err.Error())
 	}
-	return
 }
