@@ -431,7 +431,7 @@ func checkStorage(job *batchv1.Job) chan CheckStorageResult {
 
 		result := CheckStorageResult{}
 
-		checkStorage, err := client.BatchV1().Jobs(checkNamespace).Create(ctx, job)
+		checkStorage, err := client.BatchV1().Jobs(checkNamespace).Create(ctx, job, metav1.CreateOptions{})
 		if err != nil {
 			log.Infoln("Failed to create a storage check Job in the cluster:", err)
 			result.Err = err
