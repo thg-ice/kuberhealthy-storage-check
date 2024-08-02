@@ -78,7 +78,7 @@ func createStorageConfig(pvcname, accessMode string) *corev1.PersistentVolumeCla
 	pvcSpec := corev1.PersistentVolumeClaimSpec{
 		AccessModes: []v1.PersistentVolumeAccessMode{getAccessMode(accessMode)},
 		//Selector: ""
-		Resources: v1.ResourceRequirements{
+		Resources: v1.VolumeResourceRequirements{
 			Requests: v1.ResourceList{
 				v1.ResourceName(v1.ResourceStorage): resource.MustParse(pvcSize),
 			},
@@ -256,7 +256,7 @@ func createStorage(pvcConfig *corev1.PersistentVolumeClaim) chan StorageResult {
 
 		result := StorageResult{}
 
-		storage, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Create(pvcConfig)
+		storage, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Create(ctx, pvcConfig, metav1.CreateOptions{})
 		if err != nil {
 			log.Infoln("Failed to create a storage in the cluster:", err)
 			result.Err = err
@@ -275,7 +275,7 @@ func createStorage(pvcConfig *corev1.PersistentVolumeClaim) chan StorageResult {
 			log.Infoln("Watching for storage to exist.")
 
 			// Watch that it is up.
-			watch, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Watch(metav1.ListOptions{
+			watch, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Watch(ctx, metav1.ListOptions{
 				Watch:         true,
 				FieldSelector: "metadata.name=" + storage.Name,
 			})
@@ -341,8 +341,9 @@ func initializeStorage(job *batchv1.Job) chan InitStorageResult {
 		defer close(createChan)
 
 		result := InitStorageResult{}
+		createOpts := metav1.CreateOptions{}
 
-		initStorage, err := client.BatchV1().Jobs(checkNamespace).Create(job)
+		initStorage, err := client.BatchV1().Jobs(checkNamespace).Create(ctx, job, createOpts)
 		if err != nil {
 			log.Infoln("Failed to create a storage initializer Job in the cluster:", err)
 			result.Err = err
@@ -361,7 +362,7 @@ func initializeStorage(job *batchv1.Job) chan InitStorageResult {
 			log.Infoln("Watching for storage initializer Job to exist.")
 
 			// Watch that it is up.
-			watch, err := client.BatchV1().Jobs(checkNamespace).Watch(metav1.ListOptions{
+			watch, err := client.BatchV1().Jobs(checkNamespace).Watch(ctx, metav1.ListOptions{
 				Watch:         true,
 				FieldSelector: "metadata.name=" + initStorage.Name,
 				// LabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
@@ -430,7 +431,7 @@ func checkStorage(job *batchv1.Job) chan CheckStorageResult {
 
 		result := CheckStorageResult{}
 
-		checkStorage, err := client.BatchV1().Jobs(checkNamespace).Create(job)
+		checkStorage, err := client.BatchV1().Jobs(checkNamespace).Create(ctx, job)
 		if err != nil {
 			log.Infoln("Failed to create a storage check Job in the cluster:", err)
 			result.Err = err
@@ -449,7 +450,7 @@ func checkStorage(job *batchv1.Job) chan CheckStorageResult {
 			log.Infoln("Watching for storage check Job to exist.")
 
 			// Watch that it is up.
-			watch, err := client.BatchV1().Jobs(checkNamespace).Watch(metav1.ListOptions{
+			watch, err := client.BatchV1().Jobs(checkNamespace).Watch(ctx, metav1.ListOptions{
 				Watch:         true,
 				FieldSelector: "metadata.name=" + checkStorage.Name,
 			})
@@ -529,7 +530,7 @@ func deleteStorageAndWait(ctx context.Context) error {
 			time.Sleep(time.Second * 5)
 
 			// Watch that it is gone by listing repeatedly.
-			storageList, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).List(metav1.ListOptions{
+			storageList, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).List(ctx, metav1.ListOptions{
 				FieldSelector: "metadata.name=" + checkStorageName,
 			})
 			if err != nil {
@@ -595,7 +596,7 @@ func deleteStorageCheckAndWait(ctx context.Context) error {
 			time.Sleep(time.Second * 5)
 
 			// Watch that it is gone by listing repeatedly.
-			jobList, err := client.BatchV1().Jobs(checkNamespace).List(metav1.ListOptions{
+			jobList, err := client.BatchV1().Jobs(checkNamespace).List(ctx, metav1.ListOptions{
 				FieldSelector: "metadata.name=" + jobName,
 			})
 			if err != nil {
@@ -661,7 +662,7 @@ func deleteStorageInitJobAndWait(ctx context.Context) error {
 			time.Sleep(time.Second * 5)
 
 			// Watch that it is gone by listing repeatedly.
-			jobList, err := client.BatchV1().Jobs(checkNamespace).List(metav1.ListOptions{
+			jobList, err := client.BatchV1().Jobs(checkNamespace).List(ctx, metav1.ListOptions{
 				FieldSelector: "metadata.name=" + jobName,
 			})
 			if err != nil {
@@ -713,7 +714,7 @@ func deleteStorage() error {
 	}
 
 	// Delete the storage and return the result.
-	return client.CoreV1().PersistentVolumeClaims(checkNamespace).Delete(checkStorageName, &deleteOpts)
+	return client.CoreV1().PersistentVolumeClaims(checkNamespace).Delete(ctx, checkStorageName, deleteOpts)
 }
 
 // deleteStorageInitJob issues a foreground delete for the test storage init name.
@@ -728,7 +729,7 @@ func deleteStorageInitJob(job string) error {
 	}
 
 	// Delete the storage and return the result.
-	return client.BatchV1().Jobs(checkNamespace).Delete(job, &deleteOpts)
+	return client.BatchV1().Jobs(checkNamespace).Delete(ctx, job, deleteOpts)
 }
 
 // deleteStorageCheckJob issues a foreground delete for the storage check job name.
@@ -743,7 +744,7 @@ func deleteStorageCheckJob(job string) error {
 	}
 
 	// Delete the storage and return the result.
-	return client.BatchV1().Jobs(checkNamespace).Delete(job, &deleteOpts)
+	return client.BatchV1().Jobs(checkNamespace).Delete(ctx, job, deleteOpts)
 }
 
 // cleanUpOrphanedStorage cleans up storages created from previous checks.
@@ -755,7 +756,7 @@ func cleanUpOrphanedStorage() error {
 		defer close(cleanUpChan)
 
 		// Watch that it is gone.
-		watch, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Watch(metav1.ListOptions{
+		watch, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Watch(ctx, metav1.ListOptions{
 			Watch:         true,
 			FieldSelector: "metadata.name=" + checkStorageName,
 			// LabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
@@ -799,7 +800,7 @@ func cleanUpOrphanedStorage() error {
 	}
 
 	// Send the delete request.
-	err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Delete(checkStorageName, &deleteOpts)
+	err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Delete(ctx, checkStorageName, deleteOpts)
 	if err != nil {
 		return errors.New("failed to delete previous storage: " + err.Error())
 	}
@@ -813,7 +814,7 @@ func findPreviousStorage() (bool, error) {
 
 	log.Infoln("Attempting to find previously created storage(s) belonging to this check.")
 
-	storageList, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).List(metav1.ListOptions{})
+	storageList, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Infoln("error listing storages:", err)
 		return false, err
@@ -849,7 +850,7 @@ func findPreviousStorageInitJob() (bool, error) {
 
 	log.Infoln("Attempting to find previously created storage init job belonging to this check.")
 
-	jobList, err := client.BatchV1().Jobs(checkNamespace).List(metav1.ListOptions{})
+	jobList, err := client.BatchV1().Jobs(checkNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Infoln("error listing Jobs:", err)
 		return false, err
@@ -887,7 +888,7 @@ func findPreviousStorageCheckJob() (bool, error) {
 
 	log.Infoln("Attempting to find previously created storage check job belonging to this check.")
 
-	jobList, err := client.BatchV1().Jobs(checkNamespace).List(metav1.ListOptions{})
+	jobList, err := client.BatchV1().Jobs(checkNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Infoln("error listing Jobs:", err)
 		return false, err
@@ -927,7 +928,7 @@ func waitForStorageToDelete() chan bool {
 	go func() {
 		defer close(deleteChan)
 		for {
-			_, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Get(checkStorageName, metav1.GetOptions{})
+			_, err := client.CoreV1().PersistentVolumeClaims(checkNamespace).Get(ctx, checkStorageName, metav1.GetOptions{})
 			if err != nil {
 				log.Debugln("error from Storages().Get():", err.Error())
 				if k8sErrors.IsNotFound(err) || strings.Contains(err.Error(), "not found") {
